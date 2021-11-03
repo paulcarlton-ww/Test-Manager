@@ -1,0 +1,25 @@
+# Add exclusion for Python virtual environments
+**/venv/*
+**/__pycache__/*
+
+# Custom Pulumi exclusions
+/.pulumi/
+**/Pulumi.*.yaml
+!aws-deploy/Pulumi.sample.yaml
+*.pyc
+
+# VSCode settings exclusion
+/.vscode/
+*.pyc
+
+# Custom remote container environment imports
+.devcontainer/container.env
+
+**/.DS_Store
+
+# ignore license files
+**/*.ghl
+
+# ignore certificates
+**/*.pem
+**/id_rsa

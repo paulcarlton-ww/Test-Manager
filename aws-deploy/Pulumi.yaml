@@ -1,0 +1,4 @@
+name: test-manager
+runtime:
+  name: python
+description: Deploy EC2 Instance running Test Manager

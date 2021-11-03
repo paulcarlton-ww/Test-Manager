@@ -1,0 +1,80 @@
+config:
+  # AWS region to use, defaults to AWS_REGION environmental variable.
+  aws:region: eu-west-1
+
+  # Test Manager application configuration
+  test-manager:application:
+    # The github organisation and repository which is the subject of the test manager
+    github-org-repo: paulcarlton-ww/github-cluster-aws
+
+    # The path within the repository to the script to be executed by the test manager
+    ci-script: ci/create-ghes.sh
+
+    # Specify the environmental variable that will contain the bot account's github token
+    # Defaults to TEST_MANAGER_CI_GITHUB_TOKEN
+    # github-token-env: TEST_MANAGER_CI_GITHUB_TOKEN
+    # Specify a file containing the private key of the deploy key registered with the target repository
+    # currently unused by Test Manager but might be used by user's ci script.
+    # deploy-key-file: ./id_rsa
+    # Option to specify an alternative cloud init script
+    # user-data-file: ./server_user_data.sh
+    # Debug flag set to true for debugging cloud init and test manager
+    debug: True
+
+  # Networking configuration
+  test-manager:networking:
+    # Use existing vpc
+    # vpc-id: vpc-0d8f846b
+
+    # private-subnet-id: subnet-59154211
+    # public-subnet-id: subnet-59154211
+
+    # Specify the AZ to use
+    # az: a
+
+    # Specify the region, defaults to AWS_REGION environmental variable
+    # region: eu-west-1
+
+    # or create a vpc with following information
+    vpc-cidr: 192.168.0.0/16
+    private-subnet-cidr: 192.168.1.0/24
+    public-subnet-cidr: 192.168.0.0/24
+
+  # IAM role and policy configuration
+  test-manager:role:
+    # Specify the name of a role to be used by the EC2 instance the Test Manager will run on
+    # iam-role-name: test-manager-github
+
+    # Alternatively, specify the policies to be assigned to a new role for used by the EC2 instance
+    policies:
+      - arn:aws:iam::aws:policy/AmazonEC2FullAccess
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/AmazonVPCFullAccess
+      - arn:aws:iam::aws:policy/IAMFullAccess
+      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+    # Optionally add a permision boundary policy
+    permissions-boundary: arn:aws:iam::482649550366:policy/test-manager
+  
+  # Test Manager EC2 instance
+  test-manager:server:
+    # Specify the name prefix of the EC2 instance, a random string is added to this name
+    # The name prefix plus random string is used to build names for other resources created.
+    name: ghe-cluster-ci
+
+    # Specify instance type and root volume size/type.
+    # instance-type: t2.micro
+    # root-vol-size: 40
+    # root-vol-type: gp2
+
+    # Optionally specify an ssh key to allow ssh access to the instance
+    # ssh-key-name: paul
+
+    # Optionally allow external ssh access, not currently supported.
+    # ssh-access: True
+
+    # Optionally allow external HTTP access
+    # web-access: True
+
+    # Specify a specific image to use, not currently supported
+    # ami-id: ami-09bb810700a41173f
+    # ami-account: ...

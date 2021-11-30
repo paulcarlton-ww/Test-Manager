@@ -33,13 +33,13 @@ function args() {
 }
 
 function run_ci() {
-  mkdir -p /var/www/html/$pr
+  mkdir -p /var/www/html/pr$pr
   set_check_pending
   echo "Execute CI script: $CI_SCRIPT"
   echo "PWD: $PWD"
-  $CI_SCRIPT > /var/www/html/$pr/ci-output.log 2>&1
+  $CI_SCRIPT > /var/www/html/pr$pr/ci-output.log 2>&1
   result=$?
-  commentPR /var/www/html/$pr/ci-output.log
+  commentPR /var/www/html/pr$pr/ci-output.log
   set_check_completed $result
 }
 
@@ -93,24 +93,24 @@ function approvePR() {
 
 function set_check_pending() {
   curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d '{"context":"ci-ww-cx","description": "ci run started","state":"pending", "target_url": "http://$hostname/$pr/ci-output.log"}'
+    -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
 }
 
 function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d '{"context":"ci-ww-cx","description": "ci run completed successfully","state":"success", "target_url": "http://$hostname/$pr/ci-output.log"}'
+      -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
       approvePR
   else
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d '{"context":"ci-ww-cx","description": "ci run failed","state":"failure", "target_url": "http://$hostname/$pr/ci-output.log"}'
+      -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
   fi
 }
 
 args "$@"
 
-hostname=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+host_name=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 TMPDIR=$(mktemp -d)
 cd $TMPDIR
 source /etc/test-manager/env.sh

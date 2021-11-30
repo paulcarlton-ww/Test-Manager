@@ -1,6 +1,7 @@
 import pulumi
 import pulumi_aws as aws
 from pulumi import Output, ResourceOptions
+from pulumi_aws.ec2 import subnet
 from pulumi_aws.iam import ssh_key
 
 class ServerComponent(pulumi.ComponentResource):
@@ -73,6 +74,12 @@ class ServerComponent(pulumi.ComponentResource):
 
         depends_on=[instance_profile]
 
+        subnet = self.private_subnet
+        if ssh_access or web_access:
+            subnet = self.public_subnet
+        
+        depends_on.append(subnet)
+
         kwargs = {
             "iam_instance_profile": instance_profile,
             "instance_type": self.instance_type, 
@@ -83,8 +90,7 @@ class ServerComponent(pulumi.ComponentResource):
                 volume_size=self.root_volume_size,
                 encrypted=True,
             ),
-            #"network_interfaces": network_interface_args,
-            "subnet_id": self.public_subnet.id,
+            "subnet_id": subnet.id,
             "vpc_security_group_ids": self.vpc_security_group_ids,
             "opts": ResourceOptions(depends_on=depends_on, parent=self)
         }

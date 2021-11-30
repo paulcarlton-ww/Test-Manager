@@ -72,44 +72,6 @@ class ServerComponent(pulumi.ComponentResource):
         )
 
         depends_on=[instance_profile]
-        network_interface_args=[]
-        device_id=0
-
-        if self.ssh_access or self.web_access:
-            public_network_interface = aws.ec2.NetworkInterface(
-                f"public-network-interface-{name}",
-                subnet_id=self.public_subnet.id,
-                security_groups=self.vpc_security_group_ids,
-                tags={"Name": name},
-                opts=pulumi.ResourceOptions(depends_on=[
-                    self.public_subnet],
-                    parent=self)
-            )
-
-            public_network_interface_args = aws.ec2.InstanceNetworkInterfaceArgs(
-                device_index=device_id,
-                network_interface_id=public_network_interface.id)
-
-            network_interface_args = [public_network_interface_args]
-            device_id+=1
-            depends_on.append(public_network_interface)
-
-        private_network_interface = aws.ec2.NetworkInterface(
-            f"private-network-interface-{name}",
-            subnet_id=self.private_subnet.id,
-            security_groups=self.vpc_security_group_ids,
-            tags={"Name": name},
-            opts=pulumi.ResourceOptions(depends_on=[
-                self.private_subnet],
-                parent=self)
-        )
-
-        private_network_interface_args = aws.ec2.InstanceNetworkInterfaceArgs(
-            device_index=device_id,
-            network_interface_id=private_network_interface.id)
-
-        network_interface_args.append(private_network_interface_args)
-        depends_on.append(private_network_interface)
 
         kwargs = {
             "iam_instance_profile": instance_profile,
@@ -121,7 +83,9 @@ class ServerComponent(pulumi.ComponentResource):
                 volume_size=self.root_volume_size,
                 encrypted=True,
             ),
-            "network_interfaces": network_interface_args,
+            #"network_interfaces": network_interface_args,
+            "subnet_id": self.public_subnet.id,
+            "vpc_security_group_ids": self.vpc_security_group_ids,
             "opts": ResourceOptions(depends_on=depends_on, parent=self)
         }
 

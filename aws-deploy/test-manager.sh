@@ -33,13 +33,13 @@ function args() {
 }
 
 function run_ci() {
-  mkdir -p /var/www/$pr
+  mkdir -p /var/www/html/$pr
   set_check_pending
   echo "Execute CI script: $CI_SCRIPT"
   echo "PWD: $PWD"
-  $CI_SCRIPT > /var/www/$pr/ci-output.log 2>&1
+  $CI_SCRIPT > /var/www/html/$pr/ci-output.log 2>&1
   result=$?
-  commentPR /var/www/$pr/ci-output.log
+  commentPR /var/www/html/$pr/ci-output.log
   set_check_completed $result
 }
 
@@ -110,7 +110,7 @@ function set_check_completed() {
 
 args "$@"
 
-hostname=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)
+hostname=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 TMPDIR=$(mktemp -d)
 cd $TMPDIR
 source /etc/test-manager/env.sh

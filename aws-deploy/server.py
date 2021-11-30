@@ -99,7 +99,7 @@ class ServerComponent(pulumi.ComponentResource):
         else:
             private_network_interface = aws.ec2.NetworkInterface(
                 f"private-network-interface-{name}",
-                subnet_id=self.private_subnet.id,
+                subnet_id=self.public_subnet.id,
                 security_groups=self.vpc_security_group_ids,
                 tags={"Name": name},
                 opts=pulumi.ResourceOptions(depends_on=[

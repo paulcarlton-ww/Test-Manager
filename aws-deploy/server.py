@@ -71,8 +71,47 @@ class ServerComponent(pulumi.ComponentResource):
             opts=pulumi.ResourceOptions(parent=self, depends_on=[self.iam_role]),
         )
 
+        depends_on=[instance_profile]
+        network_interface_args=[]
+        device_id=0
+
+        if self.ssh_access or self.web_access:
+            public_network_interface = aws.ec2.NetworkInterface(
+                f"public-network-interface-{name}",
+                subnet_id=self.public_subnet.id,
+                security_groups=self.vpc_security_group_ids,
+                tags={"Name": name},
+                opts=pulumi.ResourceOptions(depends_on=[
+                    self.public_subnet],
+                    parent=self)
+            )
+
+            public_network_interface_args = aws.ec2.InstanceNetworkInterfaceArgs(
+                device_index=device_id,
+                network_interface_id=public_network_interface.id)
+
+            network_interface_args = [public_network_interface_args]
+            device_id+=1
+            depends_on.append(public_network_interface)
+
+        private_network_interface = aws.ec2.NetworkInterface(
+            f"private-network-interface-{name}",
+            subnet_id=self.private_subnet.id,
+            security_groups=self.vpc_security_group_ids,
+            tags={"Name": name},
+            opts=pulumi.ResourceOptions(depends_on=[
+                self.private_subnet],
+                parent=self)
+        )
+
+        private_network_interface_args = aws.ec2.InstanceNetworkInterfaceArgs(
+            device_index=device_id,
+            network_interface_id=private_network_interface.id)
+
+        network_interface_args.append(private_network_interface_args)
+        depends_on.append(private_network_interface)
+
         kwargs = {
-            "associate_public_ip_address": self.ssh_access or self.web_access,
             "iam_instance_profile": instance_profile,
             "instance_type": self.instance_type, 
             "ami": self.ami.id,   
@@ -82,9 +121,8 @@ class ServerComponent(pulumi.ComponentResource):
                 volume_size=self.root_volume_size,
                 encrypted=True,
             ),
-            "opts": ResourceOptions(depends_on=[
-                instance_profile],
-                parent=self)
+            "network_interfaces": network_interface_args,
+            "opts": ResourceOptions(depends_on=depends_on, parent=self)
         }
 
         if self.ssh_key_name is not None:
@@ -92,27 +130,6 @@ class ServerComponent(pulumi.ComponentResource):
 
         if self.tags is not None:
             kwargs["tags"] = self.tags
-
-        if self.ssh_access or self.web_access:
-            kwargs["subnet_id"]=self.private_subnet.id
-            kwargs["vpc_security_group_ids"]=self.vpc_security_group_ids
-        else:
-            private_network_interface = aws.ec2.NetworkInterface(
-                f"private-network-interface-{name}",
-                subnet_id=self.public_subnet.id,
-                security_groups=self.vpc_security_group_ids,
-                tags={"Name": name},
-                opts=pulumi.ResourceOptions(depends_on=[
-                    self.private_subnet],
-                    parent=self)
-            )
-
-            private_network_interface_args = aws.ec2.InstanceNetworkInterfaceArgs(
-                device_index=0,
-                network_interface_id=private_network_interface.id)
-
-            network_interface_args = [private_network_interface_args]
-            kwargs["network_interfaces"]=network_interface_args
 
         self.instance = aws.ec2.Instance(name, **kwargs)
 

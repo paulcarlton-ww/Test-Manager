@@ -57,20 +57,12 @@ PreflightSteps () {{
 
 SetupWebServer () {{
     echo "Setup WebServer"
-    amazon-linux-extras install -y lamp-mariadb10.2-php7.2 php7.2
     yum install -y httpd
     systemctl start httpd
     systemctl enable httpd
     usermod -a -G apache ec2-user
     chown -R ec2-user:apache /var/www
     chmod -R 2775 /var/www
-}}
-
-RetrieveDeployKey () {{
-    echo "Retrieving Deploy Key"
-    mkdir -p /etc/test-manager
-    aws s3 cp {deploykey_s3_url} /etc/test-manager/deploy-key
-    chmod 600 /etc/test-manager/deploy-key
 }}
 
 RetrieveGithubToken () {{
@@ -88,16 +80,12 @@ DeployTestManager () {{
 
 PreflightSteps
 SetupWebServer
-RetrieveDeployKey
 RetrieveGithubToken
 DeployTestManager
 
 echo "export GITHUB_ORG_REPO={github_org_repo}" > /etc/test-manager/env.sh
 echo "export CI_SCRIPT={ci_script}" >> /etc/test-manager/env.sh
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
-mkdir -p $HOME/.ssh
-cp /etc/test-manager/deploy-key $HOME/.ssh/id_rsa
-ssh-keyscan -H github.com >> $HOME/.ssh/known_hosts
 
 # Run test manager...
 nohup test-manager.sh $debug_opt >/var/log/test-manager.log 2>&1 &

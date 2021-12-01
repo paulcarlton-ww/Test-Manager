@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 
+debug_opt=""
 if [ "{debug}" == "True" ]; then
     set -x
     env | sort
     whoami
     debug_opt="--debug"
+fi
+
+comment_opt=""
+if [ "{web_access}" != "True" ]; then
+    comment_opt="--comment"
 fi
 
 export HOME=/home/ec2-user
@@ -33,11 +39,9 @@ PreflightSteps () {{
 
     echo "Updating system packages & installing Zip"
     yum update -y
-    yum install -y jq yq curl unzip python3-pip python3-virtualenv git
+    yum install -y jq yq curl unzip git
     curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" -o "session-manager-plugin.rpm"
     sudo yum install -y session-manager-plugin.rpm
-    curl -fsSL https://get.pulumi.com | sh
-    export PATH=$PATH:~/.pulumi/bin
 
     echo "Installing AWS CLI"
     TMPDIR=$(mktemp -d)
@@ -74,9 +78,16 @@ RetrieveGithubToken () {{
 
 DeployTestManager () {{
     echo "Deploying Test Manager"
+    aws s3 cp {testsrunner_s3_url} /tmp/tests-runner.sh
+    mv /tmp/tests-runner.sh /usr/bin
+    chown ec2-user:ec2-user /usr/bin/tests-runner.sh
+    chmod 2755 /usr/bin/tests-runner.sh
     aws s3 cp {testmanager_s3_url} /tmp/test-manager.sh
     mv /tmp/test-manager.sh /usr/bin
     chmod 755 /usr/bin/test-manager.sh
+    aws s3 cp {cirunner_s3_url} /tmp/ci-runner.sh
+    mv /tmp/ci-runner.sh /usr/bin
+    chmod 755 /usr/bin/ci-runner.sh
 }}
 
 PreflightSteps
@@ -89,4 +100,4 @@ echo "export CI_SCRIPT={ci_script}" >> /etc/test-manager/env.sh
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
 
 # Run test manager...
-nohup test-manager.sh $debug_opt >/var/log/test-manager.log 2>&1 &
+nohup tests-runner.sh $debug_opt $comment_opt >/var/log/test-manager.log 2>&1 &

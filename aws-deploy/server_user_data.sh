@@ -8,11 +8,6 @@ if [ "{debug}" == "True" ]; then
     debug_opt="--debug"
 fi
 
-comment_opt=""
-if [ "{web_access}" != "True" ]; then
-    comment_opt="--comment"
-fi
-
 export HOME=/home/ec2-user
 
 PreflightSteps () {{
@@ -91,7 +86,12 @@ DeployTestManager () {{
 }}
 
 PreflightSteps
-SetupWebServer
+comment_opt=""
+if [ "{web_access}" == "True" ]; then
+    SetupWebServer
+else
+    comment_opt="--comment"
+fi
 RetrieveGithubToken
 DeployTestManager
 

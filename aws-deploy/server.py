@@ -24,6 +24,8 @@ class ServerComponent(pulumi.ComponentResource):
         deploykey_s3_url=None,
         githubtoken_s3_url=None,
         testmanager_s3_url=None,
+        testrunner_s3_url=None,
+        cirunner_s3_url=None,
         github_org_repo=None,
         ci_script=None,
         stack_name=None,
@@ -52,6 +54,8 @@ class ServerComponent(pulumi.ComponentResource):
         self.deploykey_s3_url = deploykey_s3_url
         self.githubtoken_s3_url= githubtoken_s3_url
         self.testmanager_s3_url= testmanager_s3_url
+        self.testrunner_s3_url= testrunner_s3_url
+        self.cirunner_s3_url= cirunner_s3_url
         self.github_org_repo = github_org_repo
         self.ci_script = ci_script
         self.stack_name = stack_name
@@ -121,6 +125,9 @@ class ServerComponent(pulumi.ComponentResource):
             self.deploykey_s3_url,
             self.githubtoken_s3_url,
             self.testmanager_s3_url,
+            self.testrunner_s3_url,
+            self.cirunner_s3_url,
+            self.web_access,
             self.region
         ).apply(
             lambda args: (
@@ -136,7 +143,10 @@ class ServerComponent(pulumi.ComponentResource):
                     deploykey_s3_url=args[6],
                     githubtoken_s3_url=args[7],
                     testmanager_s3_url=args[8],
-                    region=args[9]
+                    testrunner_s3_url=args[9],
+                    cirunner_s3_url=args[10],
+                    web_access=args[11],
+                    region=args[12]
                 )
             )
         )

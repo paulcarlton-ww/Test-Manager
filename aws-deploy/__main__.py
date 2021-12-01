@@ -94,6 +94,20 @@ try:
         "testmanager-key-object", bucket=config_bucket.id, source=testManagerFile
     )
 
+    testRunnerFileName = "./tests-runner.sh"
+    testRunnerFile = pulumi.FileAsset(testRunnerFileName)
+
+    testrunner_bucket_object = aws.s3.BucketObject(
+        "testrunner-key-object", bucket=config_bucket.id, source=testRunnerFile
+    )
+
+    ciRunnerFileName = "./ci-runner.sh"
+    cRunnerFile = pulumi.FileAsset(ciRunnerFileName)
+
+    cirunner_bucket_object = aws.s3.BucketObject(
+        "cirunner-key-object", bucket=config_bucket.id, source=ciRunnerFile
+    )
+
     iam_role = None
     iam_role_name = role_config.get("iam-role-name")
     if iam_role_name is None:
@@ -140,6 +154,18 @@ try:
                         testmanager_bucket_object.bucket,
                         "/",
                         testmanager_bucket_object.key,
+                    ),
+        "testrunner_s3_url": Output.concat(
+                        "s3://",
+                        testrunner_bucket_object.bucket,
+                        "/",
+                        testrunner_bucket_object.key,
+                    ),
+        "cirunner_s3_url": Output.concat(
+                        "s3://",
+                        cirunner_bucket_object.bucket,
+                        "/",
+                        cirunner_bucket_object.key,
                     ),
         "private_subnet": networking.private_subnet,
         "vpc_security_group_ids": [networking.tm_sg.id],

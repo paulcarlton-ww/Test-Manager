@@ -86,18 +86,34 @@ DeployTestManager () {{
 }}
 
 PreflightSteps
+
 comment_opt=""
 if [ "{web_access}" == "True" ]; then
     SetupWebServer
 else
     comment_opt="--comment"
 fi
+
 RetrieveGithubToken
 DeployTestManager
 
 echo "export GITHUB_ORG_REPO={github_org_repo}" > /etc/test-manager/env.sh
 echo "export CI_SCRIPT={ci_script}" >> /etc/test-manager/env.sh
+echo "export CI_ID={ci_id}" >> /etc/test-manager/env.sh
+echo "export CONCURRENT_CI_RUNS={concurrent_ci_runs}" >> /etc/test-manager/env.sh
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
 
 # Run test manager...
+counter=1
+unused="None/None"
+init=$unused
+until [ $counter -eq $CONCURRENT_CI_RUNS ]
+do
+init="$init $unused"
+((counter++))
+done
+
+echo "$init" > /etc/test-manager/ci-runs.txt
+chown ec2-user:ec2-user /etc/test-manager/ci-runs.txt
+
 nohup tests-runner.sh $debug_opt $comment_opt >/var/log/test-manager.log 2>&1 &

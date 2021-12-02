@@ -10,6 +10,12 @@ config:
     # The path within the repository to the script to be executed by the test manager
     ci-script: ci/create-ghes.sh
 
+    # The name of the ci check
+    ci-id: weaveworks
+
+    # The number of concurrent ci runs allowed, defaults to 1
+    concurrent-ci-runs: 1
+
     # Specify the environmental variable that will contain the bot account's github token
     # Defaults to TEST_MANAGER_CI_GITHUB_TOKEN
     # github-token-env: TEST_MANAGER_CI_GITHUB_TOKEN

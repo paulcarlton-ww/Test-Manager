@@ -24,6 +24,14 @@ try:
 
     ssh_access = server_config.get("ssh-access") is not None and server_config.get("ssh-access")
     web_access = server_config.get("web-access") is not None and server_config.get("web-access")
+    if app_config.get("ci-id") is None:
+        print("Please define ci-id pulumi.yml file. Use Pulumi.dev.yaml.sample as a reference.")
+        raise pulumi.ConfigMissingError("test-manager:application:ci-cd")
+    ci_id = app_config.get("ci-id")
+
+    concurrent_ci_runs = app_config.get("concurrent-ci-runs")
+    if concurrent_ci_runs is None:
+        concurrent_ci_runs = 1
 
     az = network_config.get("az")
     if az is None:
@@ -185,7 +193,9 @@ try:
         },
         "region": region,
         "ssh_access": ssh_access,
-        "web_access": web_access
+        "web_access": web_access,
+        "ci_id": ci_id,
+        "concurrent_ci_runs": concurrent_ci_runs
     }
 
     if ssh_access or web_access:

@@ -45,9 +45,8 @@ function run_ci() {
     log_file=/var/log/pr$pr-ci-output.log
   else
     mkdir -p /var/www/html/pr$pr
-    log_path="pr$pr/ci-output.log"
-    log_file=/var/www/html/$log_path
-    mkdir -p $log_dir/pr$pr
+    log_path="/pr$pr/ci-output.log"
+    log_file=/var/www/html$log_path
   fi
   set_check_pending
   echo "Execute CI script: $PWD/$CI_SCRIPT"
@@ -86,23 +85,23 @@ function approvePR() {
 
 function set_check_running() {
   curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run started\",\"state\":\"running\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+    -d "{\"context\":\"$CI_CD\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name$log_path\"}"
 }
 
-function set_check_pending() {
+function set_check_cancelled() {
   curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+    -d "{\"context\":\"$CI_CD\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"http://$host_name$log_path\"}"
 }
 
 function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+      -d "{\"context\":\"$CI_CD\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name$log_path\"}"
       approvePR
   else
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"ci-ww-cx\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
+      -d "{\"context\":\"$CI_CD\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
   fi
 }
 

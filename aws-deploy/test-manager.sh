@@ -42,6 +42,11 @@ function getPRs() {
   done
 }
 
+function set_check_pending() {
+  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+    -d "{\"context\":\"$CI_CD\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+}
+
 function processPR() {
   local draft=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr | jq -r '.draft')
   if [ "$draft" == "true" ]; then
@@ -51,9 +56,13 @@ function processPR() {
   local branch=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr | jq -r '.head.ref')
   commit_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_ORG_REPO/commits/$branch | jq -r '.sha')
   status=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    | jq -r '.[] | select( .context == "ci-ww-cx")' | jq -r '.state + "/" + .updated_at' | sort -k 2 -t/ | tail -1 | cut -f1 -d/)
-  if [ -z "$status" ]; then
+    | jq -r --arg CI_ID "$CI_ID" '.[] | select( .context==$CI_ID)' | sort -k 2 -t/ | tail -1 | cut -f1 -d/)
+  if [[ -z "$status" ]]; then
+    set_check_pending
+    # ToDo: get parent of commit and cancel any active ci runs.
+    # Check if max concurrent ci runs are active.
     nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha >/var/log/ci-$branch-$commit_sha.log 2>&1 &
+    ci_pid=$!
   fi
 }
 
@@ -65,6 +74,8 @@ else
   export hostname="https://github.com/paulcarlton-ww/gitops-test-manager/blob/main/README.md#log-access"
 fi
 source /etc/test-manager/env.sh
+
+all_ci=($(cat etc/test-manager/ci-runs.txt))
 
 while true; do 
   # Get PR to test and checkout commit

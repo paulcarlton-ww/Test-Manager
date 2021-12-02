@@ -33,6 +33,8 @@ class ServerComponent(pulumi.ComponentResource):
         region=None,
         ssh_access=False,
         web_access=False,
+        ci_id=None,
+        concurrent_ci_runs=1
         opts=None):
         super().__init__("pkg:index:ServerComponent", name, None, opts)
         self.name = name
@@ -63,6 +65,8 @@ class ServerComponent(pulumi.ComponentResource):
         self.region = region
         self.web_access = web_access
         self.ssh_access = ssh_access
+        self.ci_id = ci_id
+        self.concurrent_ci_runs = concurrent_ci_runs
 
         if self.ami_id is None:
             self.ami = self.get_ami()
@@ -128,7 +132,9 @@ class ServerComponent(pulumi.ComponentResource):
             self.testrunner_s3_url,
             self.cirunner_s3_url,
             self.web_access,
-            self.region
+            self.region,
+            self.ci_id,
+            self.concurrent_ci_runs
         ).apply(
             lambda args: (
                 open(self.user_data_file)
@@ -146,7 +152,9 @@ class ServerComponent(pulumi.ComponentResource):
                     testrunner_s3_url=args[9],
                     cirunner_s3_url=args[10],
                     web_access=args[11],
-                    region=args[12]
+                    region=args[12],
+                    ci_id=args[13],
+                    concurrent_ci_runs=args[14]
                 )
             )
         )

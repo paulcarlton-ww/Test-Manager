@@ -48,7 +48,6 @@ function run_ci() {
     log_path="/pr$pr/ci-output.log"
     log_file=/var/www/html$log_path
   fi
-  set_check_pending
   echo "Execute CI script: $PWD/$CI_SCRIPT"
   $CI_SCRIPT > $log_file 2>&1
   result=$?
@@ -81,16 +80,6 @@ function commentPR() {
 function approvePR() {
   curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr/reviews \
     -d '{"event":"APPROVE"}'
-}
-
-function set_check_running() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_CD\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name$log_path\"}"
-}
-
-function set_check_cancelled() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_CD\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"http://$host_name$log_path\"}"
 }
 
 function set_check_completed() {

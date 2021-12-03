@@ -34,7 +34,7 @@ class ServerComponent(pulumi.ComponentResource):
         ssh_access=False,
         web_access=False,
         ci_id=None,
-        concurrent_ci_runs=1
+        concurrent_ci_runs=1,
         opts=None):
         super().__init__("pkg:index:ServerComponent", name, None, opts)
         self.name = name

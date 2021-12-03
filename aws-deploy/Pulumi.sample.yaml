@@ -14,7 +14,7 @@ config:
     ci-id: weaveworks
 
     # The number of concurrent ci runs allowed, defaults to 1
-    concurrent-ci-runs: 1
+    # concurrent-ci-runs: 1
 
     # Specify the environmental variable that will contain the bot account's github token
     # Defaults to TEST_MANAGER_CI_GITHUB_TOKEN
@@ -35,7 +35,7 @@ config:
     # private-subnet-id: subnet-59154211
     # public-subnet-id: subnet-59154211
 
-    # Specify the AZ to use
+    # Specify the AZ to use, defaults to 'a'
     # az: a
 
     # Specify the region, defaults to AWS_REGION environmental variable
@@ -75,10 +75,10 @@ config:
     # Optionally specify an ssh key to allow ssh access to the instance
     # ssh-key-name: paul
 
-    # Optionally allow external ssh access, not currently supported.
+    # Optionally allow external ssh access, defaults to False
     # ssh-access: True
 
-    # Optionally allow external HTTP access
+    # Optionally allow external HTTP access, defaults to True
     # web-access: True
 
     # Specify a specific image to use, not currently supported

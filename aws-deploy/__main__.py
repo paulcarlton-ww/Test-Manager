@@ -32,6 +32,8 @@ try:
     concurrent_ci_runs = app_config.get("concurrent-ci-runs")
     if concurrent_ci_runs is None:
         concurrent_ci_runs = 1
+    if concurrent_ci_runs < 1:
+        raise Exception("test-manager:application:concurrent-ci-runs must be 1 or more") 
 
     az = network_config.get("az")
     if az is None:
@@ -110,7 +112,7 @@ try:
     )
 
     ciRunnerFileName = "./ci-runner.sh"
-    cRunnerFile = pulumi.FileAsset(ciRunnerFileName)
+    ciRunnerFile = pulumi.FileAsset(ciRunnerFileName)
 
     cirunner_bucket_object = aws.s3.BucketObject(
         "cirunner-key-object", bucket=config_bucket.id, source=ciRunnerFile

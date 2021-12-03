@@ -62,7 +62,7 @@ SetupWebServer () {{
     systemctl enable httpd
     usermod -a -G apache ec2-user
     chown -R ec2-user:apache /var/www
-    chmod -R 2775 /var/www
+    chmod -R 775 /var/www
 }}
 
 RetrieveGithubToken () {{
@@ -73,10 +73,9 @@ RetrieveGithubToken () {{
 
 DeployTestManager () {{
     echo "Deploying Test Manager"
-    aws s3 cp {testsrunner_s3_url} /tmp/tests-runner.sh
+    aws s3 cp {testrunner_s3_url} /tmp/tests-runner.sh
     mv /tmp/tests-runner.sh /usr/bin
-    chown ec2-user:ec2-user /usr/bin/tests-runner.sh
-    chmod 2755 /usr/bin/tests-runner.sh
+    chmod 755 /usr/bin/tests-runner.sh
     aws s3 cp {testmanager_s3_url} /tmp/test-manager.sh
     mv /tmp/test-manager.sh /usr/bin
     chmod 755 /usr/bin/test-manager.sh
@@ -104,6 +103,7 @@ echo "export CONCURRENT_CI_RUNS={concurrent_ci_runs}" >> /etc/test-manager/env.s
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
 
 # Run test manager...
+source /etc/test-manager/env.sh
 counter=1
 unused="None/None"
 init=$unused
@@ -116,4 +116,4 @@ done
 echo "$init" > /etc/test-manager/ci-runs.txt
 chown ec2-user:ec2-user /etc/test-manager/ci-runs.txt
 
-nohup tests-runner.sh $debug_opt $comment_opt >/var/log/test-manager.log 2>&1 &
+nohup sudo -E -u ec2-user tests-runner.sh $debug_opt $comment_opt >/var/log/test-manager.log 2>&1 &

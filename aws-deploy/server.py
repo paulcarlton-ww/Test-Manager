@@ -134,7 +134,8 @@ class ServerComponent(pulumi.ComponentResource):
             self.web_access,
             self.region,
             self.ci_id,
-            self.concurrent_ci_runs
+            self.concurrent_ci_runs,
+            self.iam_role
         ).apply(
             lambda args: (
                 open(self.user_data_file)
@@ -154,7 +155,8 @@ class ServerComponent(pulumi.ComponentResource):
                     web_access=args[11],
                     region=args[12],
                     ci_id=args[13],
-                    concurrent_ci_runs=args[14]
+                    concurrent_ci_runs=args[14],
+                    instance_role=args[15]
                 )
             )
         )

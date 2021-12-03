@@ -168,6 +168,7 @@ if [ -z "$comment" ] ; then
 else
   export host_name="https://github.com/paulcarlton-ww/gitops-test-manager/blob/main/README.md#log-access"
 fi
+
 source /etc/test-manager/env.sh
 
 all_ci="$(cat /etc/test-manager/ci-runs.txt)"

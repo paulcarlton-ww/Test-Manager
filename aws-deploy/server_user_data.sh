@@ -33,8 +33,10 @@ PreflightSteps () {{
     fi
 
     echo "Updating system packages & installing Zip"
+    amazon-linux-extras install epel -y
+    yum-config-manager --enable epel
     yum update -y
-    yum install -y jq yq curl unzip git
+    yum install -y jq curl unzip git git-lfs
     curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" -o "session-manager-plugin.rpm"
     sudo yum install -y session-manager-plugin.rpm
 

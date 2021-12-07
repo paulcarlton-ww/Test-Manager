@@ -50,14 +50,19 @@ function run_ci() {
     log_path="/pr$pr/ci-output.log"
     log_file=/var/www/html$log_path
   fi
-  set_check_running
-  echo "Execute CI script: $PWD/$CI_SCRIPT"
-  $CI_SCRIPT > $log_file 2>&1
-  result=$?
-  if [ -n "$comment" ] ; then
-    commentPR $log_file
+  if [ -f $CI_SCRIPT ]; then
+    set_check_running
+    echo "Execute CI script: $PWD/$CI_SCRIPT"
+    $CI_SCRIPT > $log_file 2>&1
+    result=$?
+    if [ -n "$comment" ] ; then
+      commentPR $log_file
+    fi
+    set_check_completed $result
+  else
+    echo "no $CI_SCRIPT file found in PR" > $log_file
+    set_check_completed 1
   fi
-  set_check_completed $result
   cd
   rm -rf $TMPDIR
 }
@@ -69,6 +74,7 @@ function clone_repo() {
   if [ -d "$REPO" ]; then
     rm -rf $REPO
   fi
+  git lfs install --skip-repo
   git clone https://$GITHUB_TOKEN@github.com/$GITHUB_ORG_REPO.git
   cd $REPO
 }
@@ -94,11 +100,11 @@ function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"$CI_CD\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name$log_path\"}"
+      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name$log_path\"}"
       approvePR
   else
     curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"$CI_CD\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
+      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
   fi
 }
 

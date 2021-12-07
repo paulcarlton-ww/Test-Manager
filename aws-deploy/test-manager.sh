@@ -73,7 +73,7 @@ function processPR() {
     fi
     slot="$(get_ci_slot)"
     if [ -n "$slot" ]; then
-      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha > $HOME/ci-$branch-$commit_sha.log 2>&1 &
+      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha > $HOME/ci-$commit_sha.log 2>&1 &
       ci_pid=$!
       add_ci_run $slot $commit_sha $ci_pid
     fi
@@ -93,6 +93,9 @@ function cancel_parent() {
       kill -10 $ci_pid
     fi
     set_check_cancelled
+    if [ -e  "$HOME/ci-$parent_sha.log" ]; then
+      rm $HOME/ci-$parent_sha.log
+    fi
   fi
 }
 
@@ -117,11 +120,11 @@ function get_ci_pid() {
 }
 
 function remove_ci_run() {
-  local commit_sha="$1"
+  local commit="$1"
   local ci_pid="$2"
   for slot in ${!all_ci[@]}
   do
-    if [ "${all_ci[$slot]}" == "$commit_sha/$ci_pid" ]; then
+    if [ "${all_ci[$slot]}" == "$commit/$ci_pid" ]; then
       all_ci[$slot]="None/None"
       echo "${all_ci[@]}" > /etc/test-manager/ci-runs.txt
       return
@@ -143,9 +146,9 @@ function get_ci_slot() {
 function remove_completed_runs() {
   for slot in ${!all_ci[@]}
   do
-    if [ "${all_ci[$slot]}" == "None/None" ]; then
+    if [ "${all_ci[$slot]}" != "None/None" ]; then
       pid="$(echo ${all_ci[$slot]} | cut -f2 -d/)"
-      if [ "$pid" == "None" ]; then
+      if [[ "$pid" == "None" || -z "$pid" ]]; then
         continue
       fi
       set +e

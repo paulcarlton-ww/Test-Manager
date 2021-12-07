@@ -135,7 +135,7 @@ class ServerComponent(pulumi.ComponentResource):
             self.region,
             self.ci_id,
             self.concurrent_ci_runs,
-            self.iam_role
+            Output.all(self.iam_role.name).apply(lambda l: f"{l[0]}")
         ).apply(
             lambda args: (
                 open(self.user_data_file)

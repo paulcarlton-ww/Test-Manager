@@ -70,6 +70,8 @@ function processPR() {
     if [ -z "$status" ]; then
       set_check_pending
       cancel_parent
+    else
+      remove_completed_runs 
     fi
     slot="$(get_ci_slot)"
     if [ -n "$slot" ]; then

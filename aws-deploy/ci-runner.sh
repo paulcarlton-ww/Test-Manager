@@ -6,6 +6,25 @@
 
 set -xeuo pipefail
 
+tempfiles=( )
+cleanup() {
+  rm -f "${tempfiles[@]}"
+}
+trap cleanup 0
+
+error() {
+  local parent_lineno="$1"
+  local message="$2"
+  local code="${3:-1}"
+  if [[ -n "$message" ]] ; then
+    echo "Error on or near line ${parent_lineno}: ${message}; exiting with status ${code}"
+  else
+    echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
+  fi
+  exit "${code}"
+}
+trap 'error ${LINENO}' ERR
+
 function usage()
 {
     echo "usage ${0} [--debug] [--comment] --pull-request <pr number> --commit-sha <commit sha>"
@@ -50,7 +69,7 @@ function run_ci() {
     log_path="/pr$pr/ci-output.log"
     log_file=/var/www/html$log_path
   fi
-  if [ -f $CI_SCRIPT ]; then
+  if [ -f "$CI_SCRIPT" ]; then
     set_check_running
     echo "Execute CI script: $PWD/$CI_SCRIPT"
     $CI_SCRIPT > $log_file 2>&1
@@ -69,6 +88,7 @@ function run_ci() {
 
 function clone_repo() {
   TMPDIR=$(mktemp -d)
+  tempfiles+=( "$TMPDIR" )
   cd $TMPDIR
   REPO=$(echo $GITHUB_ORG_REPO | cut -f2 -d/)
   if [ -d "$REPO" ]; then

@@ -89,10 +89,10 @@ function processPR() {
   commit_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_ORG_REPO/commits/$branch | jq -r '.sha')
   details=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
     | jq -r --arg CI_ID "$CI_ID" '.[] | select( .context==$CI_ID)' | jq -r '.state + "/" + .updated_at + "/" + .description' | sort -k 2 -t/ | tail -1)
-  if [ -n "$details" ]; then
-    status=$(echo "$details" | cut -f1 -d/)
-    description=$(echo "$details" | cut -f3 -d/)
-    updated=$(echo "$details" | cut -f2 -d/)
+  status=$(echo "$details" | cut -f1 -d/)
+  description=$(echo "$details" | cut -f3 -d/)
+  updated=$(echo "$details" | cut -f2 -d/)
+  if [ -n "$updated" ]; then
     process_comments $updated
   fi
   if [[ -z "$status" || "$status" == "pending" && "$description" == "ci run pending" ]]; then

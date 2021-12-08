@@ -104,6 +104,7 @@ echo "export CI_ID={ci_id}" >> /etc/test-manager/env.sh
 echo "export CONCURRENT_CI_RUNS={concurrent_ci_runs}" >> /etc/test-manager/env.sh
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
 echo "export INSTANCE_ROLE={instance_role}" >> /etc/test-manager/env.sh
+echo "export AWS_REGION={region}" >> /etc/test-manager/env.sh
 
 # Run test manager...
 source /etc/test-manager/env.sh

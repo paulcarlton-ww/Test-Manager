@@ -21,6 +21,7 @@ error() {
   else
     echo "Error on or near line ${parent_lineno}; exiting with status ${code}"
   fi
+  set_check_completed 1
   exit "${code}"
 }
 trap 'error ${LINENO}' ERR

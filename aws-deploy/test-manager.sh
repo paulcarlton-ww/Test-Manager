@@ -44,6 +44,31 @@ function getPRs() {
   done
 }
 
+function process_comments() {
+   local created="$1"
+   details=$(curl -v -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments |\
+      jq -r --arg CI_ID "$CI_ID check " '.[] | select( .body | ascii_downcase | startswith($CI_ID))' | jq -r '.created_at + "/" + .body' | sort -k 1 -t/ | tail -1)
+   created=$(echo "$details" | cut -f1 -d/)
+   action=$(echo "$details" | cut -f2 -d/ | cut -f3 -d" ")
+   if [ "$created" > "$check_updated" ]; then
+    return
+  fi
+  if [ "$action" == "rerun" ]; then
+    set_check_pending
+  fi
+
+  if [ "$action" == "abort" ]; then
+    ci_pid="$(get_ci_pid $commit_sha)"
+    if [ -n "$ci_pid" ]; then
+      kill -10 $ci_pid
+    fi
+    set_check_cancelled
+    if [ -e  "$HOME/ci-$commit_sha.log" ]; then
+      rm $HOME/ci-$parent_sha.log
+    fi
+  fi
+}
+
 function set_check_pending() {
   curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
     -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
@@ -66,6 +91,10 @@ function processPR() {
     | jq -r --arg CI_ID "$CI_ID" '.[] | select( .context==$CI_ID)' | jq -r '.state + "/" + .updated_at + "/" + .description' | sort -k 2 -t/ | tail -1)
   status=$(echo "$details" | cut -f1 -d/)
   description=$(echo "$details" | cut -f3 -d/)
+  updated=$(echo "$details" | cut -f2 -d/)
+
+  process_comments $updated
+
   if [[ -z "$status" || "$status" == "pending" && "$description" == "ci run pending" ]]; then
     if [ -z "$status" ]; then
       set_check_pending

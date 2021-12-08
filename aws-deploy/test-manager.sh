@@ -45,7 +45,7 @@ function getPRs() {
 }
 
 function process_comments() {
-   local created="$1"
+   local check_updated="$1"
    details=$(curl -v -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments |\
       jq -r --arg CI_ID "$CI_ID check " '.[] | select( .body | ascii_downcase | startswith($CI_ID))' | jq -r '.created_at + "/" + .body' | sort -k 1 -t/ | tail -1)
    created=$(echo "$details" | cut -f1 -d/)

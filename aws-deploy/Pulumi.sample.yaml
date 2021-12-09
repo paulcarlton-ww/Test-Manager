@@ -19,9 +19,6 @@ config:
     # Specify the environmental variable that will contain the bot account's github token
     # Defaults to TEST_MANAGER_CI_GITHUB_TOKEN
     # github-token-env: TEST_MANAGER_CI_GITHUB_TOKEN
-    # Specify a file containing the private key of the deploy key registered with the target repository
-    # currently unused by Test Manager but might be used by user's ci script.
-    # deploy-key-file: ./id_rsa
     # Option to specify an alternative cloud init script
     # user-data-file: ./server_user_data.sh
     # Debug flag set to true for debugging cloud init and test manager
@@ -59,7 +56,7 @@ config:
       - arn:aws:iam::aws:policy/IAMFullAccess
       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
     # Optionally add a permision boundary policy
-    permissions-boundary: arn:aws:iam::482649550366:policy/test-manager
+    # permissions-boundary: arn:aws:iam:::policy/test-manager
   
   # Test Manager EC2 instance
   test-manager:server:

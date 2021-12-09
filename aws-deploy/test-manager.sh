@@ -50,7 +50,7 @@ function process_comments() {
       jq -r --arg CI_ID "$CI_ID check " '.[] | select( .body | ascii_downcase | startswith($CI_ID))' | jq -r '.created_at + "/" + .body' | sort -k 1 -t/ | tail -1)
    created=$(echo "$details" | cut -f1 -d/)
    action=$(echo "$details" | cut -f2 -d/ | cut -f3 -d" ")
-   if [[] "$created" > "$check_updated" ]]; then
+   if [[ "$created" > "$check_updated" ]]; then
     return
   fi
   if [ "$action" == "rerun" ]; then

@@ -192,7 +192,8 @@ try:
         "debug": debug,
         "tags": {
             "Name": server_name,
-            ""
+            "Repo": app_config.get("github-org-repo"),
+            "Type": "gitops-test-manager"
         },
         "region": region,
         "ssh_access": ssh_access,

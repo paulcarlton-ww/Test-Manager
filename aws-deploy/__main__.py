@@ -192,6 +192,7 @@ try:
         "debug": debug,
         "tags": {
             "Name": server_name,
+            ""
         },
         "region": region,
         "ssh_access": ssh_access,

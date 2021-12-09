@@ -54,7 +54,7 @@ function process_comments() {
     return
   fi
   if [ "$action" == "rerun" ]; then
-    set_check_pending
+    set_check_pending $commit_sha
   fi
 
   if [ "$action" == "abort" ]; then
@@ -62,7 +62,7 @@ function process_comments() {
     if [ -n "$ci_pid" ]; then
       kill -10 $ci_pid
     fi
-    set_check_cancelled
+    set_check_cancelled $commit_sha
     if [ -e  "$HOME/ci-$commit_sha.log" ]; then
       rm $HOME/ci-$parent_sha.log
     fi
@@ -70,13 +70,25 @@ function process_comments() {
 }
 
 function set_check_pending() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+  local commit="$1"
+  if [ -z "$comment" ] ; then
+    url="http://$host_name/pr$pr/ci-output.log"
+  else
+    url="$host_name"
+  fi
+  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"$url\"}"
 }
 
 function set_check_cancelled() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"http://$host_name$log_path\"}"
+  local commit="$1"
+  if [ -z "$comment" ] ; then
+    url="http://$host_name/pr$pr/ci-output.log"
+  else
+    url="$host_name"
+  fi
+  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"$url\"}"
 }
 
 function processPR() {
@@ -97,7 +109,7 @@ function processPR() {
   fi
   if [[ -z "$status" || "$status" == "pending" && "$description" == "ci run pending" ]]; then
     if [ -z "$status" ]; then
-      set_check_pending
+      set_check_pending $commit_sha
       cancel_parent
     else
       remove_completed_runs 
@@ -123,7 +135,7 @@ function cancel_parent() {
     if [ -n "$ci_pid" ]; then
       kill -10 $ci_pid
     fi
-    set_check_cancelled
+    set_check_cancelled $parent_sha
     if [ -e  "$HOME/ci-$parent_sha.log" ]; then
       rm $HOME/ci-$parent_sha.log
     fi

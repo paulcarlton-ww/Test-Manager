@@ -234,5 +234,5 @@ all_ci="$(cat /etc/test-manager/ci-runs.txt)"
 while true; do 
   # Get PR to test and checkout commit
   getPRs
-  sleep 10
+  sleep 60
 done

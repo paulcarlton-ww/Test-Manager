@@ -3,8 +3,6 @@
 debug_opt=""
 if [ "{debug}" == "True" ]; then
     set -x
-    env | sort
-    whoami
     debug_opt="--debug"
 fi
 

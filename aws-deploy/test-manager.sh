@@ -5,7 +5,7 @@
 # Version: 1.0
 # Author: Paul Carlton (mailto:paul.carlton@weave.works)
 
-set -xeuo pipefail
+set -euo pipefail
 
 function usage()
 {
@@ -46,11 +46,11 @@ function getPRs() {
 
 function process_comments() {
    local check_updated="$1"
-   details=$(curl -v -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments |\
+   details=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments |\
       jq -r --arg CI_ID "$CI_ID check " '.[] | select( .body | ascii_downcase | startswith($CI_ID))' | jq -r '.created_at + "/" + .body' | sort -k 1 -t/ | tail -1)
    created=$(echo "$details" | cut -f1 -d/)
    action=$(echo "$details" | cut -f2 -d/ | cut -f3 -d" ")
-   if [[ "$created" > "$check_updated" ]]; then
+   if [[ "$created" < "$check_updated" ]]; then
     return
   fi
   if [ "$action" == "rerun" ]; then
@@ -69,15 +69,18 @@ function process_comments() {
   fi
 }
 
+function set_url() {  
+  if [ -z "$comment" ] ; then
+    echo "http://$host_name/pr$pr/ci-output.log"
+  else
+    echo "$host_name"
+  fi
+}
+
 function set_check_pending() {
   local commit="$1"
-  if [ -z "$comment" ] ; then
-    url="http://$host_name/pr$pr/ci-output.log"
-  else
-    url="$host_name"
-  fi
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"$url\"}"
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"$(set_url)\"}"
 }
 
 function set_check_cancelled() {
@@ -87,8 +90,8 @@ function set_check_cancelled() {
   else
     url="$host_name"
   fi
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"$url\"}"
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"$(set_url)\"}"
 }
 
 function processPR() {
@@ -116,10 +119,18 @@ function processPR() {
     fi
     slot="$(get_ci_slot)"
     if [ -n "$slot" ]; then
-      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha > $HOME/ci-$commit_sha.log 2>&1 &
+      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha --url $(set_url) | sed s/$GITHUB_TOKEN/REDACTED/g > $(set_log_file) 2>&1 &
       ci_pid=$!
       add_ci_run $slot $commit_sha $ci_pid
     fi
+  fi
+}
+
+function set_log_file() {
+  if [ -n "$comment" ] ; then
+    echo "/var/log/pr$pr-ci-output.log"
+  else
+    echo "/var/www/html/pr$pr/ci-output.log"
   fi
 }
 

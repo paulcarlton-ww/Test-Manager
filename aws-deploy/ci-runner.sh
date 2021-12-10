@@ -4,7 +4,7 @@
 # Version: 1.0
 # Author: Paul Carlton (mailto:paul.carlton@weave.works)
 
-set -xeuo pipefail
+set -euo pipefail
 
 tempfiles=( )
 cleanup() {
@@ -28,11 +28,12 @@ trap 'error ${LINENO}' ERR
 
 function usage()
 {
-    echo "usage ${0} [--debug] [--comment] --pull-request <pr number> --commit-sha <commit sha>"
+    echo "usage ${0} [--debug] [--comment] --pull-request <pr number> --commit-sha <commit sha> --url <log file url> "
     echo "This script will look for new PRs and run the configured ci script against the PR branch"
     echo "--comment option causes comments to be written to PR containing test log"
     echo "--pull-request is the pull request number"
     echo "--commit-sha is the commit sha"
+    echo "--url is the URL to use in the check status"
 }
 
 function args() {
@@ -47,6 +48,7 @@ function args() {
           "--comment") comment="--comment";;
           "--pull-request") (( arg_index+=1 ));pr="${arg_list[${arg_index}]}";;
           "--commit-sha") (( arg_index+=1 ));commit_sha="${arg_list[${arg_index}]}";;
+          "--url") (( arg_index+=1 ));url="${arg_list[${arg_index}]}";;
                "-h") usage; exit;;
            "--help") usage; exit;;
                "-?") usage; exit;;
@@ -63,28 +65,20 @@ function args() {
 function run_ci() {
   clone_repo
   git checkout $commit_sha
-  if [ -n "$comment" ] ; then
-    log_file=/var/log/pr$pr-ci-output.log
-  else
-    mkdir -p /var/www/html/pr$pr
-    log_path="/pr$pr/ci-output.log"
-    log_file=/var/www/html$log_path
-  fi
   if [ -f "$CI_SCRIPT" ]; then
     set_check_running
-    echo "Execute CI script: $PWD/$CI_SCRIPT"
-    $CI_SCRIPT > $log_file 2>&1
+    echo "Execute CI script: $CI_SCRIPT"
+    $CI_SCRIPT
     result=$?
     if [ -n "$comment" ] ; then
       commentPR $log_file
     fi
     set_check_completed $result
   else
-    echo "no $CI_SCRIPT file found in PR" > $log_file
+    echo "no $CI_SCRIPT file found in PR"
     set_check_completed 1
   fi
   cd
-  rm -rf $TMPDIR
 }
 
 function clone_repo() {
@@ -103,28 +97,28 @@ function clone_repo() {
 function commentPR() {
   data_file=$1
   data=$(sed -e 's/\"/\\\"/g' $data_file | awk '{printf "%s\\n", $0}')
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments \
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments \
     -d "{\"state\":\"COMMENTED\", \"body\": \"$data\"}"
 }
 
 function approvePR() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr/reviews \
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr/reviews \
     -d '{"event":"APPROVE"}'
 }
 
 function set_check_running() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
     -d "{\"context\":\"$CI_ID\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name$log_path\"}"
 }
 
 function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
-    curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+    curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name$log_path\"}"
       approvePR
   else
-    curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+    curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
   fi
 }

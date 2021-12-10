@@ -39,6 +39,7 @@ function usage()
 function args() {
   debug=""
   comment=""
+  url=""
   arg_list=( "$@" )
   arg_count=${#arg_list[@]}
   arg_index=0
@@ -108,18 +109,18 @@ function approvePR() {
 
 function set_check_running() {
   curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"http://$host_name$log_path\"}"
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"$url\"}"
 }
 
 function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
     curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"http://$host_name$log_path\"}"
+      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"$url\"}"
       approvePR
   else
     curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"http://$host_name$log_path\"}"
+      -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"$url\"}"
   fi
 }
 

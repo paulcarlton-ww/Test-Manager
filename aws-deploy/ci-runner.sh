@@ -8,7 +8,7 @@ set -euo pipefail
 
 tempfiles=( )
 cleanup() {
-  rm -f "${tempfiles[@]}"
+  rm -rf "${tempfiles[@]}"
 }
 trap cleanup 0
 

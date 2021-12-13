@@ -124,8 +124,6 @@ function set_check_completed() {
   fi
 }
 
-args "$@"
-
 log_path=""
 
 # Set AWS creds
@@ -136,5 +134,7 @@ curl -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/m
 export AWS_ACCESS_KEY_ID=$(jq -r '."AccessKeyId"' $HOME/iam.json)
 export AWS_SECRET_ACCESS_KEY=$(jq -r '."SecretAccessKey"' $HOME/iam.json)
 export AWS_SESSION_TOKEN=$(jq -r '."Token"' $HOME/iam.json)
+
+args "$@"
 
 run_ci

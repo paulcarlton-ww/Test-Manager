@@ -119,7 +119,7 @@ function processPR() {
     fi
     slot="$(get_ci_slot)"
     if [ -n "$slot" ]; then
-      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha --url $(set_url) | sed s/$GITHUB_TOKEN/REDACTED/g > $(set_log_file) 2>&1 &
+      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha --url $(set_url)  2>&1 | sed s/$GITHUB_TOKEN/REDACTED/g > $(set_log_file) &
       ci_pid=$!
       add_ci_run $slot $commit_sha $ci_pid
     fi

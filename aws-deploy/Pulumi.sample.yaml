@@ -5,7 +5,7 @@ config:
   # Test Manager application configuration
   test-manager:application:
     # The github organisation and repository which is the subject of the test manager
-    github-org-repo: paulcarlton-ww/github-cluster-aws
+    github-org-repo: paulcarlton-ww/test-repo
 
     # The path within the repository to the script to be executed by the test manager
     ci-script: ci/create-ghes.sh
@@ -22,15 +22,15 @@ config:
     # Option to specify an alternative cloud init script
     # user-data-file: ./server_user_data.sh
     # Debug flag set to true for debugging cloud init and test manager
-    debug: True
+    # debug: True
 
   # Networking configuration
   test-manager:networking:
     # Use existing vpc
-    # vpc-id: vpc-0d8f846b
+    # vpc-id: vpc-...
 
-    # private-subnet-id: subnet-59154211
-    # public-subnet-id: subnet-59154211
+    # private-subnet-id: subnet-...
+    # public-subnet-id: subnet-...
 
     # Specify the AZ to use, defaults to 'a'
     # az: a

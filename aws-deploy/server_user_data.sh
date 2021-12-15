@@ -3,8 +3,6 @@
 debug_opt=""
 if [ "{debug}" == "True" ]; then
     set -x
-    env | sort
-    whoami
     debug_opt="--debug"
 fi
 
@@ -33,8 +31,10 @@ PreflightSteps () {{
     fi
 
     echo "Updating system packages & installing Zip"
+    amazon-linux-extras install epel -y
+    yum-config-manager --enable epel
     yum update -y
-    yum install -y jq yq curl unzip git
+    yum install -y jq curl unzip git git-lfs
     curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" -o "session-manager-plugin.rpm"
     sudo yum install -y session-manager-plugin.rpm
 
@@ -102,6 +102,7 @@ echo "export CI_ID={ci_id}" >> /etc/test-manager/env.sh
 echo "export CONCURRENT_CI_RUNS={concurrent_ci_runs}" >> /etc/test-manager/env.sh
 echo "export GITHUB_TOKEN=$(cat /etc/test-manager/github-token)" >> /etc/test-manager/env.sh
 echo "export INSTANCE_ROLE={instance_role}" >> /etc/test-manager/env.sh
+echo "export AWS_REGION={region}" >> /etc/test-manager/env.sh
 
 # Run test manager...
 source /etc/test-manager/env.sh

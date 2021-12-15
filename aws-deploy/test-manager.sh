@@ -5,7 +5,7 @@
 # Version: 1.0
 # Author: Paul Carlton (mailto:paul.carlton@weave.works)
 
-set -xeuo pipefail
+set -euo pipefail
 
 function usage()
 {
@@ -44,14 +44,54 @@ function getPRs() {
   done
 }
 
+function process_comments() {
+   local check_updated="$1"
+   details=$(curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments |\
+      jq -r --arg CI_ID "$CI_ID check " '.[] | select( .body | ascii_downcase | startswith($CI_ID))' | jq -r '.created_at + "/" + .body' | sort -k 1 -t/ | tail -1)
+   created=$(echo "$details" | cut -f1 -d/)
+   action=$(echo "$details" | cut -f2 -d/ | cut -f3 -d" ")
+   if [[ "$created" < "$check_updated" ]]; then
+    return
+  fi
+  if [ "$action" == "rerun" ]; then
+    set_check_pending $commit_sha
+  fi
+
+  if [ "$action" == "abort" ]; then
+    ci_pid="$(get_ci_pid $commit_sha)"
+    if [ -n "$ci_pid" ]; then
+      kill -10 $ci_pid
+    fi
+    set_check_cancelled $commit_sha
+    if [ -e  "$HOME/ci-$commit_sha.log" ]; then
+      rm $HOME/ci-$parent_sha.log
+    fi
+  fi
+}
+
+function set_url() {  
+  if [ -z "$comment" ] ; then
+    echo "http://$host_name/pr$pr/ci-output.log"
+  else
+    echo "$host_name"
+  fi
+}
+
 function set_check_pending() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"http://$host_name/pr$pr/ci-output.log\"}"
+  local commit="$1"
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run pending\",\"state\":\"pending\", \"target_url\": \"$(set_url)\"}"
 }
 
 function set_check_cancelled() {
-  curl -v -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
-    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"http://$host_name$log_path\"}"
+  local commit="$1"
+  if [ -z "$comment" ] ; then
+    url="http://$host_name/pr$pr/ci-output.log"
+  else
+    url="$host_name"
+  fi
+  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit \
+    -d "{\"context\":\"$CI_ID\",\"description\": \"ci run cancelled\",\"state\":\"error\", \"target_url\": \"$(set_url)\"}"
 }
 
 function processPR() {
@@ -66,17 +106,32 @@ function processPR() {
     | jq -r --arg CI_ID "$CI_ID" '.[] | select( .context==$CI_ID)' | jq -r '.state + "/" + .updated_at + "/" + .description' | sort -k 2 -t/ | tail -1)
   status=$(echo "$details" | cut -f1 -d/)
   description=$(echo "$details" | cut -f3 -d/)
+  updated=$(echo "$details" | cut -f2 -d/)
+  if [ -n "$updated" ]; then
+    process_comments $updated
+  fi
   if [[ -z "$status" || "$status" == "pending" && "$description" == "ci run pending" ]]; then
     if [ -z "$status" ]; then
-      set_check_pending
+      set_check_pending $commit_sha
       cancel_parent
+    else
+      remove_completed_runs 
     fi
     slot="$(get_ci_slot)"
     if [ -n "$slot" ]; then
-      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha > $HOME/ci-$branch-$commit_sha.log 2>&1 &
+      nohup ci-runner.sh $debug $comment --pull-request $pr --commit-sha $commit_sha --url $(set_url)  2>&1 | sed s/$GITHUB_TOKEN/REDACTED/g > $(set_log_file) &
       ci_pid=$!
       add_ci_run $slot $commit_sha $ci_pid
     fi
+  fi
+}
+
+function set_log_file() {
+  if [ -n "$comment" ] ; then
+    echo "/var/log/pr$pr-ci-output.log"
+  else
+    mkdir /var/www/html/pr$pr
+    echo "/var/www/html/pr$pr/ci-output.log"
   fi
 }
 
@@ -92,7 +147,10 @@ function cancel_parent() {
     if [ -n "$ci_pid" ]; then
       kill -10 $ci_pid
     fi
-    set_check_cancelled
+    set_check_cancelled $parent_sha
+    if [ -e  "$HOME/ci-$parent_sha.log" ]; then
+      rm $HOME/ci-$parent_sha.log
+    fi
   fi
 }
 
@@ -117,11 +175,11 @@ function get_ci_pid() {
 }
 
 function remove_ci_run() {
-  local commit_sha="$1"
+  local commit="$1"
   local ci_pid="$2"
   for slot in ${!all_ci[@]}
   do
-    if [ "${all_ci[$slot]}" == "$commit_sha/$ci_pid" ]; then
+    if [ "${all_ci[$slot]}" == "$commit/$ci_pid" ]; then
       all_ci[$slot]="None/None"
       echo "${all_ci[@]}" > /etc/test-manager/ci-runs.txt
       return
@@ -143,9 +201,9 @@ function get_ci_slot() {
 function remove_completed_runs() {
   for slot in ${!all_ci[@]}
   do
-    if [ "${all_ci[$slot]}" == "None/None" ]; then
+    if [ "${all_ci[$slot]}" != "None/None" ]; then
       pid="$(echo ${all_ci[$slot]} | cut -f2 -d/)"
-      if [ "$pid" == "None" ]; then
+      if [[ "$pid" == "None" || -z "$pid" ]]; then
         continue
       fi
       set +e
@@ -176,5 +234,5 @@ all_ci="$(cat /etc/test-manager/ci-runs.txt)"
 while true; do 
   # Get PR to test and checkout commit
   getPRs
-  sleep 10
+  sleep 60
 done

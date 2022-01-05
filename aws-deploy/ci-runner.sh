@@ -69,6 +69,7 @@ function run_ci() {
   if [ -f "$CI_SCRIPT" ]; then
     set_check_running
     echo "Execute CI script: $CI_SCRIPT"
+    export PR_NUM=$pr
     $CI_SCRIPT
     result=$?
     if [ -n "$comment" ] ; then

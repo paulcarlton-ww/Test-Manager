@@ -4,12 +4,23 @@ Test Manager deploys a EC2 instance in an AWS account which will monitor a confi
 
 To deploy the test manager in an AWS account in order to do CI testing for a repository you must provide a GitHub token with write access to the repository under test. You also need to provide the GitHub repository name and the path to the script to be executed. The GitHub token is provided via an environmental variable `TEST_MANAGER_CI_GITHUB_TOKEN` and the other information is specficed via a yaml file. See [Pulumi.sample.yaml](aws-deploy/Pulumi.sample.yaml) for an example.
 
+The following environmental variables are avaialable to the CI testing script executed by the test manager:
+
+| Variable | Description |
+| --- | --- |
+| `PR_NUM` | Pull Request number |
+| `CI_ID` | Name of this CI tester |
+| `GITHUB_TOKEN` | GitHub token used to update pull request status |
+| `AWS_REGION` | AWS Region |
+
 ## Setup
 
 Install python3, pip, [Pulumi](https://www.pulumi.com/docs/get-started/install/) and [AWS CLI version 2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-mac.html).
 
 Clone this repository and deploy the python code in a virtualenv, e.g.
 
+    cd <path to clone of directory>
+    export PATH=$PATH:$PWD/bin
     cd aws-deploy
     pip install virtualenv
     virtualenv venv

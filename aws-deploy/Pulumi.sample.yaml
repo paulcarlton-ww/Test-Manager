@@ -1,5 +1,5 @@
 config:
-  # AWS region to use, defaults to AWS_REGION environmental variable.
+  # AWS region to use
   aws:region: eu-west-1
 
   # Test Manager application configuration

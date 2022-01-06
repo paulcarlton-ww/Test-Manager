@@ -68,7 +68,8 @@ function run_ci() {
   git checkout $commit_sha
   if [ -f "$CI_SCRIPT" ]; then
     set_check_running
-    echo "Execute CI script: $CI_SCRIPT"
+    echo "Executing CI script: $CI_SCRIPT"
+    echo "Run starting at `date`"
     export PR_NUM=$pr
     $CI_SCRIPT
     result=$?
@@ -81,6 +82,7 @@ function run_ci() {
     set_check_completed 1
   fi
   cd
+  echo "Run completed at `date`"
 }
 
 function clone_repo() {
@@ -103,11 +105,6 @@ function commentPR() {
     -d "{\"state\":\"COMMENTED\", \"body\": \"$data\"}"
 }
 
-function approvePR() {
-  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/pulls/$pr/reviews \
-    -d '{"event":"APPROVE"}'
-}
-
 function set_check_running() {
   curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
     -d "{\"context\":\"$CI_ID\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"$url\"}"
@@ -118,7 +115,6 @@ function set_check_completed() {
   if [ "$result" == "0" ]; then
     curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"$url\"}"
-      approvePR
   else
     curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"$url\"}"

@@ -130,7 +130,7 @@ function set_log_file() {
   if [ -n "$comment" ] ; then
     echo "/var/log/pr$pr-ci-output.log"
   else
-    mkdir /var/www/html/pr$pr
+    mkdir -p /var/www/html/pr$pr
     echo "/var/www/html/pr$pr/ci-output.log"
   fi
 }

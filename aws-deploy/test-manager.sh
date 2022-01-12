@@ -222,7 +222,13 @@ function remove_completed_runs() {
 args "$@"
 
 if [ -z "$comment" ] ; then
-  export host_name=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+  # cater for case on no public ip, i.e. using private network connection to local IP
+  http_code="$(curl -s -w "%{http_code}" -o /dev/null http://169.254.169.254/latest/meta-data/public-ipv4)"
+  if [ "$http_code" == "200" ]; then
+    export host_name=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+  else
+    export host_name=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+  fi
 else
   export host_name="https://github.com/paulcarlton-ww/gitops-test-manager/blob/main/README.md#log-access"
 fi

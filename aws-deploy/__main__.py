@@ -23,7 +23,11 @@ try:
     debug = app_config.get("debug") is not None and app_config.get("debug")
 
     ssh_access = server_config.get("ssh-access") is not None and server_config.get("ssh-access")
-    web_access = server_config.get("web-access") is None or server_config.get("web-access")
+
+    web_access = True
+    if server_config.get("web-access") is not None:
+        web_access = server_config.get("web-access")
+
     if app_config.get("ci-id") is None:
         print("Please define ci-id pulumi.yml file. Use Pulumi.dev.yaml.sample as a reference.")
         raise pulumi.ConfigMissingError("test-manager:application:ci-cd")

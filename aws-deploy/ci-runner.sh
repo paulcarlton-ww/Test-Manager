@@ -126,7 +126,7 @@ log_path=""
 # Set AWS creds
 
 TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-curl $curl_proxy_opt -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/iam/security-credentials/$INSTANCE_ROLE > $HOME/iam.json
+curl -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/iam/security-credentials/$INSTANCE_ROLE > $HOME/iam.json
 
 export AWS_ACCESS_KEY_ID=$(jq -r '."AccessKeyId"' $HOME/iam.json)
 export AWS_SECRET_ACCESS_KEY=$(jq -r '."SecretAccessKey"' $HOME/iam.json)

@@ -105,6 +105,7 @@ Resources:
       Action: "s3:*"
       Effect: "Allow"
       Resource:
+        - "arn:aws:s3:::{ci_id}*"
         - "arn:aws:s3:::{l[0]}"
         - "arn:aws:s3:::{l[0]}/*"
 ''')

@@ -222,7 +222,7 @@ function remove_completed_runs() {
 args "$@"
 
 if [ -z "$comment" ] ; then
-  export host_name=$(curl $curl_proxy_opt -s http://169.254.169.254/latest/meta-data/public-ipv4)
+  export host_name=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 else
   export host_name="https://github.com/paulcarlton-ww/gitops-test-manager/blob/main/README.md#log-access"
 fi

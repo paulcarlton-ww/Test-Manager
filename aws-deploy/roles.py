@@ -2,12 +2,9 @@ import pulumi
 import pulumi_aws as aws
 import json
 
-from pulumi_aws.iam import policy
-
 
 class RolesComponentArgs:
-    def __init__(self, server_name, configS3Bucket, policies, permissions_boundary_arn=None):
-        self.server_name = server_name
+    def __init__(self, configS3Bucket, policies, permissions_boundary_arn=None):
         self.configS3Bucket = configS3Bucket
         self.policies = policies
         self.permissions_boundary_arn = permissions_boundary_arn
@@ -65,7 +62,6 @@ class RolesComponent(pulumi.ComponentResource):
             ),
             permissions_boundary=args.permissions_boundary_arn,
             inline_policies=inline_policies,
-            managed_policy_arns= args.policies,
-            tags={"Name": args.server_name},
+            managed_policy_arns=args.policies,
             opts=pulumi.ResourceOptions(parent=self),
         )

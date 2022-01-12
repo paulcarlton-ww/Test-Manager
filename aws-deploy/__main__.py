@@ -15,7 +15,7 @@ config = pulumi.Config()
 server_config = config.require_object("server")
 app_config = config.require_object("application")
 network_config = config.require_object("networking")
-role_config = config.require_object("role")
+roles_config = config.require_object("role")
 server_name = server_config.get("name") + "-" + id_generator()
 githubtoken_filename = f'/tmp/{server_name}'
 
@@ -23,7 +23,7 @@ try:
     debug = app_config.get("debug") is not None and app_config.get("debug")
 
     ssh_access = server_config.get("ssh-access") is not None and server_config.get("ssh-access")
-    web_access = server_config.get("web-access") is not None and server_config.get("web-access")
+    web_access = server_config.get("web-access") is None or server_config.get("web-access")
     if app_config.get("ci-id") is None:
         print("Please define ci-id pulumi.yml file. Use Pulumi.dev.yaml.sample as a reference.")
         raise pulumi.ConfigMissingError("test-manager:application:ci-cd")
@@ -34,6 +34,18 @@ try:
         concurrent_ci_runs = 1
     if concurrent_ci_runs < 1:
         raise Exception("test-manager:application:concurrent-ci-runs must be 1 or more") 
+
+    proxy_http=None
+    proxy_https=None
+    no_proxy=None
+    proxy_port=None
+    if server_config.get("proxy-setup") is not None:
+        proxy_http=server_config["proxy-setup"].get("http-proxy")
+        proxy_https=server_config["proxy-setup"].get("https-proxy")
+        no_proxy=server_config["proxy-setup"].get("no-proxy")
+        proxy_info = proxy_http.split(":")
+        if len(proxy_info) == 3:
+            proxy_port = proxy_info[2]
 
     az = network_config.get("az")
     if az is None:
@@ -58,6 +70,7 @@ try:
             private_subnet_id=network_config.get("private-subnet-id"),
             ssh_access=ssh_access,
             web_access=web_access,
+            proxy_port=proxy_port,
             az=az,
             region=region
         ),
@@ -72,15 +85,29 @@ try:
         },
     )
 
-    deployFileName = "./id_rsa"
-    if app_config.get("deploy_file") is not None:
-        deployFileName = app_config.get("deploy-file")
+    s3_vpc_endpoint = roles_config.get("s3-vpc-endpoint")
+    if s3_vpc_endpoint:
+        s3_policy_yml = Output.all(config_bucket.id).apply(lambda l: f'''
+AWSTemplateFormatVersion: "2010-09-09"
+Description: S3 Bucket
+Transform: AppleTaggingStandard
+Resources:
+  UpdateS3VPCEndpoint:
+    Type: Custom::VpcEndpointUpdater
+    Properties:
+      ServiceToken: !ImportValue VpcEndpointUpdaterARN
+      VpcEndpointId: !ImportValue {s3_vpc_endpoint}
+      Principal: "*"
+      Action: "s3:*"
+      Effect: "Allow"
+      Resource:
+        - "arn:aws:s3:::{l[0]}"
+        - "arn:aws:s3:::{l[0]}/*"
+''')
 
-    deployFile = pulumi.FileAsset(deployFileName)
-
-    deploykey_bucket_object = aws.s3.BucketObject(
-        "deploy-key-object", bucket=config_bucket.id, source=deployFile
-    )
+        s3_policy = aws.cloudformation.Stack(f"{server_name}s3-policy-config", template_body=s3_policy_yml, opts=ResourceOptions(depends_on=[config_bucket]), capabilities=["CAPABILITY_AUTO_EXPAND"])
+    else:
+        s3_policy = None
 
     github_token_env = app_config.get("test-manager:github-token-env")
     if github_token_env is None:
@@ -118,19 +145,18 @@ try:
         "cirunner-key-object", bucket=config_bucket.id, source=ciRunnerFile
     )
 
+    permissions_boundary_arn = None
     iam_role = None
-    iam_role_name = role_config.get("iam-role-name")
+    if roles_config:
+        permissions_boundary_arn = roles_config.get("permissions-boundary")
+        policies = roles_config.get("policies")
+        iam_role_name = roles_config.get("iam-role-name")
+    
     if iam_role_name is None:
-        permissions_boundary_arn = role_config.get("permissions_boundary")
-        policies = role_config.get("policies")
-        if policies is None:
-            raise pulumi.ConfigMissingError("test-manager:policies")
-
-        component_roles = [config_bucket]
         roles = roles.RolesComponent(
             "roles",
             roles.RolesComponentArgs(
-                server_name, *component_roles, policies, permissions_boundary_arn=permissions_boundary_arn
+                config_bucket, policies, permissions_boundary_arn=permissions_boundary_arn
             ),
         )
         iam_role = roles.base_instance_role
@@ -138,21 +164,7 @@ try:
         role_info = aws.iam.get_role(name=iam_role_name)
         iam_role = aws.iam.Role.get("iam_role", role_info.id)
 
-    proxy_http=None
-    proxy_https=None
-    no_proxy=None
-    if server_config.get("proxy-setup") is not None:
-        proxy_http=server_config["proxy-setup"].get("http-proxy"),
-        proxy_https=server_config["proxy-setup"].get("https-proxy"),
-        no_proxy=server_config["proxy-setup"].get("no-proxy"),
-
     server_args = {
-        "deploykey_s3_url": Output.concat(
-                        "s3://",
-                        deploykey_bucket_object.bucket,
-                        "/",
-                        deploykey_bucket_object.key,
-                    ),
         "githubtoken_s3_url": Output.concat(
                         "s3://",
                         githubtoken_bucket_object.bucket,
@@ -199,8 +211,13 @@ try:
         "ssh_access": ssh_access,
         "web_access": web_access,
         "ci_id": ci_id,
-        "concurrent_ci_runs": concurrent_ci_runs
+        "concurrent_ci_runs": concurrent_ci_runs,
     }
+
+    depends_on = []
+    if s3_policy is not None:
+        depends_on.append(s3_policy)    
+    server_args["depends_on"] = depends_on
 
     if ssh_access or web_access:
         server_args["public_subnet"] = networking.public_subnet

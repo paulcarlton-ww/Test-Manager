@@ -45,7 +45,7 @@ function args() {
   arg_index=0
   while (( arg_index < arg_count )); do
     case "${arg_list[${arg_index}]}" in
-          "--debug") set -x; debug="--debug";;
+          "--debug") set -x; debug="--debug";export DEBUG=1;;
           "--comment") comment="--comment";;
           "--pull-request") (( arg_index+=1 ));pr="${arg_list[${arg_index}]}";;
           "--commit-sha") (( arg_index+=1 ));commit_sha="${arg_list[${arg_index}]}";;
@@ -101,22 +101,22 @@ function clone_repo() {
 function commentPR() {
   data_file=$1
   data=$(sed -e 's/\"/\\\"/g' $data_file | awk '{printf "%s\\n", $0}')
-  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments \
+  curl $curl_proxy_opt -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/issues/$pr/comments \
     -d "{\"state\":\"COMMENTED\", \"body\": \"$data\"}"
 }
 
 function set_check_running() {
-  curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+  curl $curl_proxy_opt -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
     -d "{\"context\":\"$CI_ID\",\"description\": \"ci run started\",\"state\":\"pending\", \"target_url\": \"$url\"}"
 }
 
 function set_check_completed() {
   local result=$1
   if [ "$result" == "0" ]; then
-    curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+    curl $curl_proxy_opt -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run completed successfully\",\"state\":\"success\", \"target_url\": \"$url\"}"
   else
-    curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
+    curl $curl_proxy_opt -s -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_ORG_REPO/statuses/$commit_sha \
       -d "{\"context\":\"$CI_ID\",\"description\": \"ci run failed\",\"state\":\"failure\", \"target_url\": \"$url\"}"
   fi
 }
@@ -125,8 +125,8 @@ log_path=""
 
 # Set AWS creds
 
-TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-curl -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/iam/security-credentials/$INSTANCE_ROLE > $HOME/iam.json
+TOKEN=$(curl $curl_proxy_opt -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+curl $curl_proxy_opt -s -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/iam/security-credentials/$INSTANCE_ROLE > $HOME/iam.json
 
 export AWS_ACCESS_KEY_ID=$(jq -r '."AccessKeyId"' $HOME/iam.json)
 export AWS_SECRET_ACCESS_KEY=$(jq -r '."SecretAccessKey"' $HOME/iam.json)

@@ -1,5 +1,6 @@
 import pulumi
 import pulumi_aws as aws
+from pulumi_aws.ec2 import proxy_protocol_policy
 
 
 class NetworkingComponentArgs:
@@ -14,6 +15,7 @@ class NetworkingComponentArgs:
         private_subnet_cidr_block="10.0.0.0/24",
         ssh_access=False,
         web_access=False,
+        proxy_port=None,
         az='a',
         region=None
     ):
@@ -27,6 +29,7 @@ class NetworkingComponentArgs:
         self.create_vpc = self.vpc_id is None
         self.ssh_access = ssh_access
         self.web_access = web_access
+        self.proxy_port = proxy_port
         self.region = region
         self.az = f'{region}{az}'
 
@@ -134,14 +137,14 @@ class NetworkingComponent(pulumi.ComponentResource):
             )
 
             self.private_subnet = aws.ec2.Subnet.get(
-                f"private-subnet-{self.prefix}",
-                id=self.private_subnet_id,
+                f"private-subnet-{args.prefix}",
+                id=args.private_subnet_id,
                 opts=pulumi.ResourceOptions(parent=self),
             )
 
             self.public_subnet = aws.ec2.Subnet.get(
-                f"public-subnet-{self.prefix}",
-                id=self.public_subnet_id,
+                f"public-subnet-{args.prefix}",
+                id=args.public_subnet_id,
                 opts=pulumi.ResourceOptions(parent=self),
             )
 
@@ -165,12 +168,7 @@ class NetworkingComponent(pulumi.ComponentResource):
                 }
             )
 
-        self.tm_sg = aws.ec2.SecurityGroup(
-            "testerSg",
-            description="Allow tester access",
-            vpc_id=self.vpc.id,
-            ingress=ingress,
-            egress=[
+        egress = [
                 {
                     "protocol": "tcp",
                     "from_port": 80,
@@ -183,7 +181,22 @@ class NetworkingComponent(pulumi.ComponentResource):
                     "to_port": 443,
                     "cidr_blocks": ["0.0.0.0/0"],
                 }
-            ],
+            ]
+        
+        if args.proxy_port is not None:
+            egress.append({
+                    "protocol": "tcp",
+                    "from_port": int(args.proxy_port),
+                    "to_port": int(args.proxy_port),
+                    "cidr_blocks": ["0.0.0.0/0"],
+                })
+
+        self.tm_sg = aws.ec2.SecurityGroup(
+            "testerSg",
+            description="Allow tester access",
+            vpc_id=self.vpc.id,
+            ingress=ingress,
+            egress=egress,
             tags={"Name": args.prefix},
             opts=pulumi.ResourceOptions(parent=self),
         )

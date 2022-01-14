@@ -32,16 +32,16 @@ config:
     # private-subnet-id: subnet-...
     # public-subnet-id: subnet-...
 
+    # or create a vpc with following information
+    vpc-cidr: 192.168.0.0/16
+    private-subnet-cidr: 192.168.1.0/24
+    public-subnet-cidr: 192.168.0.0/24
+
     # Specify the AZ to use, defaults to 'a'
     # az: a
 
     # Specify the region, defaults to AWS_REGION environmental variable
     # region: eu-west-1
-
-    # or create a vpc with following information
-    vpc-cidr: 192.168.0.0/16
-    private-subnet-cidr: 192.168.1.0/24
-    public-subnet-cidr: 192.168.0.0/24
 
   # IAM role and policy configuration
   test-manager:role:
@@ -57,6 +57,7 @@ config:
       - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
     # Optionally add a permision boundary policy
     # permissions-boundary: arn:aws:iam:::policy/test-manager
+    # s3-vpc-endpoint: <s3 endpoint name>
   
   # Test Manager EC2 instance
   test-manager:server:
@@ -78,6 +79,6 @@ config:
     # Optionally allow external HTTP access, defaults to True
     # web-access: True
 
-    # Specify a specific image to use, not currently supported
+    # Specify a specific image to use
     # ami-id: ami-09bb810700a41173f
     # ami-account: ...

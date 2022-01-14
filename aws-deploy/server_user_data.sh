@@ -9,40 +9,52 @@ fi
 export HOME=/home/ec2-user
 
 PreflightSteps () {{
+    amazon-linux-extras install epel -y
+
     echo "Installing proxy"
 
     echo "{proxy_http}"
     echo "{proxy_https}"
     echo "{no_proxy}"
 
+    mkdir -p /etc/test-manager
+
     if [ "{proxy_http}" != "None" ]; then
         export http_proxy="{proxy_http}"
         export HTTP_PROXY="{proxy_http}"
+        echo "export HTTP_PROXY={proxy_http}" >> /etc/test-manager/env.sh
+        echo "export http_proxy={proxy_http}" >> /etc/test-manager/env.sh
+        echo "proxy={proxy_http}" >> /etc/yum.conf
     fi
 
     if [ "{proxy_https}" != "None" ]; then
         export https_proxy="{proxy_https}"
         export HTTPS_PROXY="{proxy_https}"
+        echo "export HTTPS_PROXY={proxy_https}" >> /etc/test-manager/env.sh
+        echo "export https_proxy={proxy_https}" >> /etc/test-manager/env.sh
+        export curl_proxy_opt="--proxy $https_proxy"
+        echo "export curl_proxy_opt=\"--proxy $https_proxy\"" >> /etc/test-manager/env.sh
     fi
 
     if [ "{no_proxy}" != "None" ]; then
         export no_proxy="{no_proxy}"
-        export NO_PROXY="{no_proxy}" 
+        export NO_PROXY="{no_proxy}"
+        echo "export NO_PROXY={no_proxy}" >> /etc/test-manager/env.sh
+        echo "export no_proxy={no_proxy}" >> /etc/test-manager/env.sh
     fi
 
-    echo "Updating system packages & installing Zip"
-    amazon-linux-extras install epel -y
+    echo "Updating system packages & installing required utilities"
     yum-config-manager --enable epel
     yum update -y
     yum install -y jq curl unzip git git-lfs
-    curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" -o "session-manager-plugin.rpm"
+    curl $curl_proxy_opt "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm" -o "session-manager-plugin.rpm"
     sudo yum install -y session-manager-plugin.rpm
 
     echo "Installing AWS CLI"
     TMPDIR=$(mktemp -d)
     cd $TMPDIR
     echo "Downloading AWS CLI"
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+    curl $curl_proxy_opt "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
     unzip -q awscliv2.zip
     ./aws/install
 
@@ -96,7 +108,7 @@ fi
 RetrieveGithubToken
 DeployTestManager
 
-echo "export GITHUB_ORG_REPO={github_org_repo}" > /etc/test-manager/env.sh
+echo "export GITHUB_ORG_REPO={github_org_repo}" >> /etc/test-manager/env.sh
 echo "export CI_SCRIPT={ci_script}" >> /etc/test-manager/env.sh
 echo "export CI_ID={ci_id}" >> /etc/test-manager/env.sh
 echo "export CONCURRENT_CI_RUNS={concurrent_ci_runs}" >> /etc/test-manager/env.sh

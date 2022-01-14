@@ -21,7 +21,6 @@ class ServerComponent(pulumi.ComponentResource):
         proxy_https=None,
         no_proxy=None,
         user_data_file="./server_user_data.sh",
-        deploykey_s3_url=None,
         githubtoken_s3_url=None,
         testmanager_s3_url=None,
         testrunner_s3_url=None,
@@ -35,6 +34,7 @@ class ServerComponent(pulumi.ComponentResource):
         web_access=False,
         ci_id=None,
         concurrent_ci_runs=1,
+        depends_on=[],
         opts=None):
         super().__init__("pkg:index:ServerComponent", name, None, opts)
         self.name = name
@@ -53,7 +53,6 @@ class ServerComponent(pulumi.ComponentResource):
         self.proxy_http = proxy_http
         self.proxy_https = proxy_https
         self.no_proxy = no_proxy
-        self.deploykey_s3_url = deploykey_s3_url
         self.githubtoken_s3_url= githubtoken_s3_url
         self.testmanager_s3_url= testmanager_s3_url
         self.testrunner_s3_url= testrunner_s3_url
@@ -67,6 +66,7 @@ class ServerComponent(pulumi.ComponentResource):
         self.ssh_access = ssh_access
         self.ci_id = ci_id
         self.concurrent_ci_runs = concurrent_ci_runs
+        self.depends_on = depends_on
 
         if self.ami_id is None:
             self.ami = self.get_ami()
@@ -80,7 +80,7 @@ class ServerComponent(pulumi.ComponentResource):
             opts=pulumi.ResourceOptions(parent=self, depends_on=[self.iam_role]),
         )
 
-        depends_on=[instance_profile]
+        self.depends_on.append(instance_profile)
 
         subnet = self.private_subnet
         if ssh_access or web_access:
@@ -126,7 +126,6 @@ class ServerComponent(pulumi.ComponentResource):
             self.debug,
             self.github_org_repo,
             self.ci_script,
-            self.deploykey_s3_url,
             self.githubtoken_s3_url,
             self.testmanager_s3_url,
             self.testrunner_s3_url,
@@ -147,16 +146,15 @@ class ServerComponent(pulumi.ComponentResource):
                     debug=args[3],
                     github_org_repo=args[4],
                     ci_script=args[5],
-                    deploykey_s3_url=args[6],
-                    githubtoken_s3_url=args[7],
-                    testmanager_s3_url=args[8],
-                    testrunner_s3_url=args[9],
-                    cirunner_s3_url=args[10],
-                    web_access=args[11],
-                    region=args[12],
-                    ci_id=args[13],
-                    concurrent_ci_runs=args[14],
-                    instance_role=args[15]
+                    githubtoken_s3_url=args[6],
+                    testmanager_s3_url=args[7],
+                    testrunner_s3_url=args[8],
+                    cirunner_s3_url=args[9],
+                    web_access=args[10],
+                    region=args[11],
+                    ci_id=args[12],
+                    concurrent_ci_runs=args[13],
+                    instance_role=args[14]
                 )
             )
         )

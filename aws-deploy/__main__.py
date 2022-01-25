@@ -94,7 +94,6 @@ try:
         s3_policy_yml = Output.all(config_bucket.id).apply(lambda l: f'''
 AWSTemplateFormatVersion: "2010-09-09"
 Description: S3 Bucket
-Transform: AppleTaggingStandard
 Resources:
   UpdateS3VPCEndpoint:
     Type: Custom::VpcEndpointUpdater
